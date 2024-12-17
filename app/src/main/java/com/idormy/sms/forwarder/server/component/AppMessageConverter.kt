@@ -1,6 +1,6 @@
 package com.idormy.sms.forwarder.server.component
 
-import android.util.Log
+import com.idormy.sms.forwarder.utils.Log
 import com.google.gson.GsonBuilder
 import com.idormy.sms.forwarder.server.model.BaseRequest
 import com.idormy.sms.forwarder.utils.Base64
@@ -21,7 +21,6 @@ import java.io.IOException
 import java.io.InputStream
 import java.lang.reflect.Type
 import java.nio.charset.Charset
-
 
 @Suppress("PrivatePropertyName")
 @Converter

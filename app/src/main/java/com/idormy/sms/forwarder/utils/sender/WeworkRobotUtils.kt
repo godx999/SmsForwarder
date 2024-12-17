@@ -1,19 +1,18 @@
 package com.idormy.sms.forwarder.utils.sender
 
-import android.util.Log
 import com.google.gson.Gson
 import com.idormy.sms.forwarder.database.entity.Rule
 import com.idormy.sms.forwarder.entity.MsgInfo
 import com.idormy.sms.forwarder.entity.result.WeworkRobotResult
 import com.idormy.sms.forwarder.entity.setting.WeworkRobotSetting
+import com.idormy.sms.forwarder.utils.Log
 import com.idormy.sms.forwarder.utils.SendUtils
 import com.idormy.sms.forwarder.utils.SettingUtils
+import com.idormy.sms.forwarder.utils.interceptor.LoggingInterceptor
 import com.xuexiang.xhttp2.XHttp
-import com.xuexiang.xhttp2.cache.model.CacheMode
 import com.xuexiang.xhttp2.callback.SimpleCallBack
 import com.xuexiang.xhttp2.exception.ApiException
 
-@Suppress("PrivatePropertyName", "UNUSED_PARAMETER")
 class WeworkRobotUtils private constructor() {
     companion object {
 
@@ -37,11 +36,26 @@ class WeworkRobotUtils private constructor() {
             Log.i(TAG, "requestUrl:$requestUrl")
 
             val msgMap: MutableMap<String, Any> = mutableMapOf()
-            msgMap["msgtype"] = "text"
+            msgMap["msgtype"] = if (setting.msgType == "markdown") "markdown" else "text"
 
-            val textText: MutableMap<String, Any> = mutableMapOf()
-            textText["content"] = content
-            msgMap["text"] = textText
+            val contextMap = mutableMapOf<String, Any>()
+            contextMap["content"] = content
+
+            if (setting.msgType == "markdown") {
+                msgMap["markdown"] = contextMap
+            } else {
+                if (setting.atAll) {
+                    contextMap["mentioned_list"] = arrayListOf("@all")
+                } else {
+                    if (setting.atUserIds.isNotEmpty()) {
+                        contextMap["mentioned_list"] = setting.atUserIds.split(",")
+                    }
+                    if (setting.atMobiles.isNotEmpty()) {
+                        contextMap["mentioned_mobile_list"] = setting.atMobiles.split(",")
+                    }
+                }
+                msgMap["text"] = contextMap
+            }
 
             val requestMsg: String = Gson().toJson(msgMap)
             Log.i(TAG, "requestMsg:$requestMsg")
@@ -49,12 +63,11 @@ class WeworkRobotUtils private constructor() {
             XHttp.post(requestUrl)
                 .upJson(requestMsg)
                 .keepJson(true)
-                .timeOut((SettingUtils.requestTimeout * 1000).toLong()) //超时时间10s
-                .cacheMode(CacheMode.NO_CACHE)
                 .retryCount(SettingUtils.requestRetryTimes) //超时重试的次数
-                .retryDelay(SettingUtils.requestDelayTime) //超时重试的延迟时间
-                .retryIncreaseDelay(SettingUtils.requestDelayTime) //超时重试叠加延时
-                .timeStamp(true)
+                .retryDelay(SettingUtils.requestDelayTime * 1000) //超时重试的延迟时间
+                .retryIncreaseDelay(SettingUtils.requestDelayTime * 1000) //超时重试叠加延时
+                .timeStamp(true) //url自动追加时间戳，避免缓存
+                .addInterceptor(LoggingInterceptor(logId)) //增加一个log拦截器, 记录请求日志
                 .execute(object : SimpleCallBack<String>() {
 
                     override fun onError(e: ApiException) {

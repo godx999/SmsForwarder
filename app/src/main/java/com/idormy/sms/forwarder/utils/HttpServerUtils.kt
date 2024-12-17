@@ -3,15 +3,13 @@ package com.idormy.sms.forwarder.utils
 
 import android.text.TextUtils
 import android.util.Base64
-import android.util.Log
 import com.google.gson.Gson
 import com.idormy.sms.forwarder.R
 import com.idormy.sms.forwarder.core.Core
 import com.idormy.sms.forwarder.entity.CloneInfo
 import com.idormy.sms.forwarder.entity.LocationInfo
 import com.idormy.sms.forwarder.server.model.BaseRequest
-import com.xuexiang.xui.utils.ResUtils.getString
-import com.xuexiang.xutil.app.AppUtils
+import com.xuexiang.xutil.resource.ResUtils.getString
 import com.yanzhenjie.andserver.error.HttpException
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -79,6 +77,9 @@ class HttpServerUtils private constructor() {
         //是否启用远程查话簿
         var enableApiContactQuery: Boolean by SharedPreference(SP_ENABLE_API_CONTACT_QUERY, true)
 
+        //是否启用远程加话簿
+        var enableApiContactAdd: Boolean by SharedPreference(SP_ENABLE_API_CONTACT_ADD, true)
+
         //是否启用远程查电量
         var enableApiBatteryQuery: Boolean by SharedPreference(SP_ENABLE_API_BATTERY_QUERY, true)
 
@@ -86,7 +87,7 @@ class HttpServerUtils private constructor() {
         var enableApiWol: Boolean by SharedPreference(SP_ENABLE_API_WOL, true)
 
         //是否启用远程找手机
-        var enableApiLocation: Boolean by SharedPreference(SP_ENABLE_API_LOCATION, true)
+        var enableApiLocation: Boolean by SharedPreference(SP_ENABLE_API_LOCATION, false)
 
         //远程找手机定位缓存
         var apiLocationCache: LocationInfo by SharedPreference(SP_API_LOCATION_CACHE, LocationInfo())
@@ -141,94 +142,44 @@ class HttpServerUtils private constructor() {
             val cloneInfo = CloneInfo()
             cloneInfo.versionCode = AppUtils.getAppVersionCode()
             cloneInfo.versionName = AppUtils.getAppVersionName()
-            cloneInfo.enableSms = SettingUtils.enableSms
-            cloneInfo.enablePhone = SettingUtils.enablePhone
-            cloneInfo.callType1 = SettingUtils.enableCallType1
-            cloneInfo.callType2 = SettingUtils.enableCallType2
-            cloneInfo.callType3 = SettingUtils.enableCallType3
-            cloneInfo.callType4 = SettingUtils.enableCallType4
-            cloneInfo.callType5 = SettingUtils.enableCallType5
-            cloneInfo.callType6 = SettingUtils.enableCallType6
-            cloneInfo.enableAppNotify = SettingUtils.enableAppNotify
-            cloneInfo.cancelAppNotify = SettingUtils.enableCancelAppNotify
-            cloneInfo.enableNotUserPresent = SettingUtils.enableNotUserPresent
-            cloneInfo.enableLoadAppList = SettingUtils.enableLoadAppList
-            cloneInfo.enableLoadUserAppList = SettingUtils.enableLoadUserAppList
-            cloneInfo.enableLoadSystemAppList = SettingUtils.enableLoadSystemAppList
-            cloneInfo.duplicateMessagesLimits = SettingUtils.duplicateMessagesLimits
-            cloneInfo.enableBatteryReceiver = SettingUtils.enableBatteryReceiver
-            cloneInfo.batteryLevelMin = SettingUtils.batteryLevelMin
-            cloneInfo.batteryLevelMax = SettingUtils.batteryLevelMax
-            cloneInfo.batteryLevelOnce = SettingUtils.batteryLevelOnce
-            cloneInfo.enableBatteryCron = SettingUtils.enableBatteryCron
-            cloneInfo.batteryCronStartTime = SettingUtils.batteryCronStartTime
-            cloneInfo.batteryCronInterval = SettingUtils.batteryCronInterval
-            cloneInfo.enableExcludeFromRecents = SettingUtils.enableExcludeFromRecents
-            cloneInfo.enableCactus = SettingUtils.enableCactus
-            cloneInfo.enablePlaySilenceMusic = SettingUtils.enablePlaySilenceMusic
-            cloneInfo.enableOnePixelActivity = SettingUtils.enableOnePixelActivity
-            cloneInfo.requestRetryTimes = SettingUtils.requestRetryTimes
-            cloneInfo.requestDelayTime = SettingUtils.requestDelayTime
-            cloneInfo.requestTimeout = SettingUtils.requestTimeout
-            cloneInfo.notifyContent = SettingUtils.notifyContent
-            cloneInfo.enableSmsTemplate = SettingUtils.enableSmsTemplate
-            cloneInfo.smsTemplate = SettingUtils.smsTemplate
-            cloneInfo.enableHelpTip = SettingUtils.enableHelpTip
-            cloneInfo.enablePureClientMode = SettingUtils.enablePureClientMode
-            cloneInfo.senderList = Core.sender.all
-            cloneInfo.ruleList = Core.rule.all
-            cloneInfo.frpcList = Core.frpc.all
-
+            cloneInfo.settings = SharedPreference.exportPreference()
+            cloneInfo.senderList = Core.sender.getAllNonCache()
+            cloneInfo.ruleList = Core.rule.getAllNonCache()
+            cloneInfo.frpcList = Core.frpc.getAllNonCache()
+            cloneInfo.taskList = Core.task.getAllNonCache()
             return cloneInfo
         }
 
         //还原设置
         fun restoreSettings(cloneInfo: CloneInfo): Boolean {
             return try {
+                //保留设备名称、SIM卡主键/备注
+                val extraDeviceMark = SettingUtils.extraDeviceMark
+                val subidSim1 = SettingUtils.subidSim1
+                val extraSim1 = SettingUtils.extraSim1
+                val subidSim2 = SettingUtils.subidSim2
+                val extraSim2 = SettingUtils.extraSim2
                 //应用配置
-                SettingUtils.enableSms = cloneInfo.enableSms
-                SettingUtils.enablePhone = cloneInfo.enablePhone
-                SettingUtils.enableCallType1 = cloneInfo.callType1
-                SettingUtils.enableCallType2 = cloneInfo.callType2
-                SettingUtils.enableCallType3 = cloneInfo.callType3
-                SettingUtils.enableCallType4 = cloneInfo.callType4
-                SettingUtils.enableCallType5 = cloneInfo.callType5
-                SettingUtils.enableCallType6 = cloneInfo.callType6
-                SettingUtils.enableAppNotify = cloneInfo.enableAppNotify
-                SettingUtils.enableCancelAppNotify = cloneInfo.cancelAppNotify
-                SettingUtils.enableNotUserPresent = cloneInfo.enableNotUserPresent
-                SettingUtils.enableLoadAppList = cloneInfo.enableLoadAppList
-                SettingUtils.enableLoadUserAppList = cloneInfo.enableLoadUserAppList
-                SettingUtils.enableLoadSystemAppList = cloneInfo.enableLoadSystemAppList
-                SettingUtils.duplicateMessagesLimits = cloneInfo.duplicateMessagesLimits
-                SettingUtils.enableBatteryReceiver = cloneInfo.enableBatteryReceiver
-                SettingUtils.batteryLevelMin = cloneInfo.batteryLevelMin
-                SettingUtils.batteryLevelMax = cloneInfo.batteryLevelMax
-                SettingUtils.batteryLevelOnce = cloneInfo.batteryLevelOnce
-                SettingUtils.enableBatteryCron = cloneInfo.enableBatteryCron
-                SettingUtils.batteryCronStartTime = cloneInfo.batteryCronStartTime.toString()
-                SettingUtils.batteryCronInterval = cloneInfo.batteryCronInterval
-                SettingUtils.enableExcludeFromRecents = cloneInfo.enableExcludeFromRecents
-                SettingUtils.enableCactus = cloneInfo.enableCactus
-                SettingUtils.enablePlaySilenceMusic = cloneInfo.enablePlaySilenceMusic
-                SettingUtils.enableOnePixelActivity = cloneInfo.enableOnePixelActivity
-                SettingUtils.requestRetryTimes = cloneInfo.requestRetryTimes
-                SettingUtils.requestDelayTime = cloneInfo.requestDelayTime
-                SettingUtils.requestTimeout = cloneInfo.requestTimeout
-                SettingUtils.notifyContent = cloneInfo.notifyContent.toString()
-                SettingUtils.enableSmsTemplate = cloneInfo.enableSmsTemplate
-                SettingUtils.smsTemplate = cloneInfo.smsTemplate.toString()
-                SettingUtils.enableHelpTip = cloneInfo.enableHelpTip
-                SettingUtils.enablePureClientMode = cloneInfo.enablePureClientMode
-                //删除发送通道、转发规则、转发日志
-                Core.sender.deleteAll()
+                SharedPreference.clearPreference()
+                SharedPreference.importPreference(cloneInfo.settings)
+                //需要排除的配置
+                SettingUtils.extraDeviceMark = extraDeviceMark
+                SettingUtils.subidSim1 = subidSim1
+                SettingUtils.extraSim1 = extraSim1
+                SettingUtils.subidSim2 = subidSim2
+                SettingUtils.extraSim2 = extraSim2
+                //删除消息与转发日志
+                Core.logs.deleteAll()
+                Core.msg.deleteAll()
                 //发送通道
+                Core.sender.deleteAll()
                 if (!cloneInfo.senderList.isNullOrEmpty()) {
                     for (sender in cloneInfo.senderList!!) {
                         Core.sender.insert(sender)
                     }
                 }
                 //转发规则
+                Core.rule.deleteAll()
                 if (!cloneInfo.ruleList.isNullOrEmpty()) {
                     for (rule in cloneInfo.ruleList!!) {
                         Core.rule.insert(rule)
@@ -241,9 +192,17 @@ class HttpServerUtils private constructor() {
                         Core.frpc.insert(frpc)
                     }
                 }
+                //Task配置
+                Core.task.deleteAll()
+                if (!cloneInfo.taskList.isNullOrEmpty()) {
+                    for (task in cloneInfo.taskList!!) {
+                        Core.task.insert(task)
+                    }
+                }
                 true
             } catch (e: Exception) {
                 e.printStackTrace()
+                Log.e("restoreSettings", e.message.toString())
                 throw HttpException(500, e.message)
                 //false
             }

@@ -1,10 +1,13 @@
 package com.idormy.sms.forwarder.database.entity
 
 import android.os.Parcelable
-import androidx.room.*
-import com.idormy.sms.forwarder.R
+import androidx.room.ColumnInfo
+import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
+import androidx.room.PrimaryKey
 import kotlinx.parcelize.Parcelize
-import java.util.*
+import java.util.Date
 
 @Parcelize
 @Entity(
@@ -49,16 +52,4 @@ data class Logs(
     @ColumnInfo(name = "forward_status", defaultValue = "1") var forwardStatus: Int = 1,
     @ColumnInfo(name = "forward_response", defaultValue = "") var forwardResponse: String = "",
     @ColumnInfo(name = "time") var time: Date = Date(),
-) : Parcelable {
-
-    val statusImageId: Int
-        get() {
-            if (forwardStatus == 1) {
-                return R.drawable.ic_round_warning
-            } else if (forwardStatus == 2) {
-                return R.drawable.ic_round_check
-            }
-            return R.drawable.ic_round_cancel
-        }
-
-}
+) : Parcelable
